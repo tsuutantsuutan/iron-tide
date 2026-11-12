@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>鋼鉄の海 IRON TIDE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@500;700;900&family=Noto+Sans+JP:wght@400;500;700&family=Oswald:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#e9eef2; --dim:#9fb0bd; --mute:#6b7d8b; --line:rgba(200,220,235,.18);
+  --panel:rgba(8,16,24,.72); --panel2:rgba(10,22,34,.88); --acc:#d9b45a; --acc2:#f0d488;
+  --ok:#7fd49a; --bad:#ff6a5a; --blue:#6fb6ff; --red:#ff7a6a; --warn:#ffc35a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:#05090d;color:var(--ink);font-family:'Noto Sans JP',system-ui,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+button{font:inherit;color:inherit}
+.hidden{display:none!important}
+.serif{font-family:'Noto Serif JP',serif}
+.num{font-family:'Oswald',sans-serif;letter-spacing:.04em}
+
+/* ---------- screens ---------- */
+.screen{position:fixed;inset:0;z-index:20;display:flex}
+.vign{position:fixed;inset:0;pointer-events:none;z-index:5;background:radial-gradient(ellipse at center,rgba(0,0,0,0) 55%,rgba(0,0,0,.55) 100%)}
+#title{align-items:stretch}
+#title .left{width:min(440px,100%);padding:56px 44px;background:linear-gradient(90deg,rgba(3,8,13,.92),rgba(3,8,13,.55) 75%,rgba(3,8,13,0));display:flex;flex-direction:column}
+.logo{font-family:'Noto Serif JP',serif;font-weight:900;font-size:58px;line-height:1;letter-spacing:.12em;margin:0;text-shadow:0 2px 30px rgba(0,0,0,.6)}
+.logo small{display:block;font-family:'Oswald';font-weight:400;font-size:15px;letter-spacing:.6em;color:var(--acc);margin-top:12px}
+.menu{margin-top:44px;display:flex;flex-direction:column;gap:4px}
+.menu button{all:unset;cursor:pointer;padding:11px 14px;border-left:2px solid transparent;font-size:17px;letter-spacing:.08em;color:var(--dim);transition:.15s}
+.menu button span{display:block;font-family:'Oswald';font-size:11px;letter-spacing:.3em;color:var(--mute)}
+.menu button:hover,.menu button:focus-visible,.menu button.on{color:var(--ink);border-left-color:var(--acc);background:linear-gradient(90deg,rgba(217,180,90,.14),transparent)}
+.tfoot{margin-top:auto;color:var(--mute);font-size:12px;line-height:1.7}
+
+.panelscr{align-items:center;justify-content:center;background:rgba(3,7,11,.35)}
+.card{background:var(--panel2);border:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);padding:26px 28px;max-height:92vh;overflow:auto;width:min(980px,96vw)}
+.card h2{font-family:'Noto Serif JP',serif;font-size:26px;margin:0 0 4px;letter-spacing:.1em}
+.card h2 small{font-family:'Oswald';font-size:12px;letter-spacing:.4em;color:var(--acc);display:block;margin-bottom:6px}
+.card p.lead{color:var(--dim);margin:0 0 18px;font-size:14px}
+.row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start}
+.btn{cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,.04);padding:10px 18px;font-size:14px;letter-spacing:.06em;transition:.15s}
+.btn:hover,.btn:focus-visible{border-color:var(--acc);background:rgba(217,180,90,.12);outline:none}
+.btn.pri{background:linear-gradient(180deg,#d9b45a,#b38a35);color:#1a1205;border-color:#e8c878;font-weight:700}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn:disabled{opacity:.4;cursor:default}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,.03);padding:7px 12px;font-size:13px}
+.seg button.on{border-color:var(--acc);background:rgba(217,180,90,.18);color:var(--acc2)}
+.field{margin-bottom:14px}
+.field>label,.field>.lab{display:block;font-size:12px;color:var(--dim);letter-spacing:.1em;margin-bottom:6px}
+input[type=text]{background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--ink);padding:9px 12px;font:inherit;font-size:15px;width:100%}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.back{position:absolute;top:18px;left:20px}
+
+/* ship select */
+#shipsel{justify-content:flex-end;background:linear-gradient(90deg,rgba(0,0,0,0) 30%,rgba(3,8,13,.7) 60%)}
+#shipsel .side{width:min(520px,100%);padding:30px 30px 24px;display:flex;flex-direction:column;background:linear-gradient(90deg,rgba(3,8,13,.0),rgba(3,8,13,.92) 18%);}
+.shiplist{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:14px 0}
+.shiplist button{all:unset;cursor:pointer;padding:9px 12px;border:1px solid var(--line);background:rgba(255,255,255,.03);font-size:14px}
+.shiplist button small{display:block;color:var(--mute);font-size:11px;font-family:'Oswald';letter-spacing:.15em}
+.shiplist button.on{border-color:var(--acc);background:rgba(217,180,90,.16)}
+.shiplist button.lock{opacity:.4}
+.sname{font-family:'Noto Serif JP';font-weight:900;font-size:40px;letter-spacing:.14em;margin:6px 0 0}
+.sname small{font-family:'Oswald';font-size:13px;letter-spacing:.35em;color:var(--acc);display:block;font-weight:400}
+.sdesc{color:var(--dim);font-size:13px;line-height:1.75;margin:10px 0}
+table.spec{width:100%;border-collapse:collapse;font-size:13px}
+table.spec td{padding:5px 2px;border-bottom:1px solid rgba(255,255,255,.06)}
+table.spec td:first-child{color:var(--mute);width:38%}
+.bars{margin:10px 0}
+.bar{display:flex;align-items:center;gap:10px;font-size:12px;margin:5px 0;color:var(--dim)}
+.bar span{width:64px}.bar i{flex:1;height:5px;background:rgba(255,255,255,.08);position:relative}
+.bar b{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#b38a35,#f0d488)}
+
+/* lobby */
+.roster{list-style:none;margin:0;padding:0;border:1px solid var(--line)}
+.roster li{display:flex;gap:10px;align-items:center;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.05);font-size:14px}
+.roster li .sw{width:10px;height:10px;border-radius:50%}
+.roster li .st{margin-left:auto;font-size:12px;color:var(--mute)}
+.roster li .st.ok{color:var(--ok)}
+.code{font-family:'Oswald';font-size:30px;letter-spacing:.3em;color:var(--acc2)}
+.note{font-size:12px;color:var(--mute);line-height:1.7}
+
+/* briefing */
+#brief .card{width:min(760px,94vw)}
+.brieftext{line-height:2;color:#d5dde3;font-size:15px;white-space:pre-wrap;font-family:'Noto Serif JP',serif}
+.objs{margin:14px 0;padding:12px 16px;border-left:2px solid var(--acc);background:rgba(217,180,90,.07);font-size:14px;line-height:1.9}
+.chap{display:grid;gap:8px}
+.chap button{all:unset;cursor:pointer;display:flex;gap:16px;align-items:center;padding:12px 16px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.chap button:hover{border-color:var(--acc)}
+.chap button .n{font-family:'Oswald';font-size:22px;color:var(--acc);width:40px}
+.chap button .t{font-family:'Noto Serif JP';font-size:17px}
+.chap button .s{font-size:12px;color:var(--mute)}
+.chap button.lock{opacity:.35;pointer-events:none}
+.chap button .clr{margin-left:auto;color:var(--ok);font-size:12px}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;inset:0;z-index:10;pointer-events:none;font-family:'Noto Sans JP'}
+#xh{position:absolute;left:50%;top:50%;width:0;height:0}
+#xh .c{position:absolute;left:-1px;top:-14px;width:2px;height:28px;background:rgba(255,255,255,.75)}
+#xh .h{position:absolute;top:-1px;height:2px;background:rgba(255,255,255,.75)}
+#xh .tk{position:absolute;top:6px;width:1px;height:7px;background:rgba(255,255,255,.55)}
+#xh .tk.l{height:12px}
+#rng{position:absolute;left:50%;top:50%;transform:translate(18px,14px);font-size:13px;text-shadow:0 1px 3px #000;white-space:nowrap}
+#rng b{font-family:'Oswald';font-size:16px;font-weight:400}
+#rng .oor{color:var(--bad)}
+#tgt{position:absolute;left:50%;top:50%;transform:translate(-50%,-80px);text-align:center;font-size:13px;text-shadow:0 1px 3px #000;white-space:nowrap}
+#tgt .nm{font-family:'Noto Serif JP';font-size:15px}
+#tgt.enemy .nm{color:var(--red)} #tgt.ally .nm{color:var(--blue)}
+.tag{position:absolute;transform:translate(-50%,-100%);font-size:11px;white-space:nowrap;text-align:center;text-shadow:0 1px 2px #000}
+.tag i{display:block;height:3px;width:60px;margin:2px auto 0;background:rgba(0,0,0,.5)}
+.tag i b{display:block;height:100%}
+.tag.e{color:var(--red)} .tag.e i b{background:var(--red)}
+.tag.a{color:var(--blue)} .tag.a i b{background:var(--blue)}
+.tag.n{color:#ddd}
+#scope{position:absolute;inset:0;display:none;background:radial-gradient(circle at center,transparent 0,transparent 41vmin,rgba(0,0,0,.92) 41.3vmin)}
+#scope.on{display:block}
+#scope svg{position:absolute;left:50%;top:50%;width:84vmin;height:84vmin;transform:translate(-50%,-50%)}
+#zoomv{position:absolute;left:50%;bottom:7vh;transform:translateX(-50%);font-family:'Oswald';color:#cfe;letter-spacing:.2em;font-size:13px;opacity:.8}
+
+.hpanel{position:absolute;background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#stat{left:18px;bottom:18px;width:330px;padding:12px 14px}
+#stat .nm{font-family:'Noto Serif JP';font-weight:700;font-size:18px;letter-spacing:.12em}
+#stat .nm small{font-family:'Oswald';font-weight:400;font-size:11px;color:var(--acc);letter-spacing:.3em;margin-left:8px}
+#hpbar{height:8px;background:rgba(255,255,255,.08);margin:8px 0 3px;position:relative}
+#hpbar b{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#4bb36d,#9ae0a8);transition:width .25s}
+#hpbar b.mid{background:linear-gradient(90deg,#c9a03a,#f0d07a)} #hpbar b.low{background:linear-gradient(90deg,#c0392b,#ff7a6a)}
+#hpt{font-size:12px;color:var(--dim);display:flex;justify-content:space-between}
+#tele{display:flex;gap:10px;margin-top:8px;font-size:12px;align-items:center}
+#tele .spd{font-family:'Oswald';font-size:24px;width:84px}
+#tele .spd small{font-size:11px;color:var(--mute)}
+#tele .ord{flex:1}
+#tele .ord div{color:var(--acc2)}
+#rud{height:6px;background:rgba(255,255,255,.08);position:relative;margin-top:4px}
+#rud b{position:absolute;top:-2px;width:3px;height:10px;background:var(--ink);left:50%}
+#rud i{position:absolute;top:-2px;width:1px;height:10px;background:var(--acc);left:50%}
+#guns{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+#guns .g{width:44px;height:24px;border:1px solid var(--line);position:relative;font-size:10px;font-family:'Oswald';display:flex;align-items:center;justify-content:center;overflow:hidden}
+#guns .g i{position:absolute;inset:auto 0 0 0;background:rgba(127,212,154,.35)}
+#guns .g.rdy{border-color:var(--ok);color:var(--ok)}
+#guns .g.blk{opacity:.35}
+#guns .g.dmg{border-color:var(--bad);color:var(--bad)}
+#ammo{display:flex;gap:6px;margin-top:8px;font-size:12px}
+#ammo span{padding:3px 8px;border:1px solid var(--line);color:var(--mute)}
+#ammo span.on{color:#1a1205;background:var(--acc);border-color:var(--acc)}
+#cons{display:flex;gap:6px;margin-top:6px;font-size:11px;color:var(--dim)}
+#cons span{padding:3px 7px;border:1px solid var(--line)}
+#cons span.cd{opacity:.45}
+#status{display:flex;gap:6px;margin-top:6px;font-size:12px;min-height:20px}
+#status span{padding:2px 8px;background:rgba(255,106,90,.2);border:1px solid rgba(255,106,90,.6);color:#ffb0a6}
+#status span.fl{background:rgba(111,182,255,.2);border-color:rgba(111,182,255,.6);color:#bfe0ff}
+
+#mapbox{right:18px;bottom:18px;padding:6px}
+#mm{display:block;width:230px;height:230px}
+#mapbox.big{right:50%;bottom:50%;transform:translate(50%,50%)}
+#mapbox.big #mm{width:min(78vh,78vw);height:min(78vh,78vw)}
+#obj{right:18px;top:18px;width:300px;padding:10px 14px;font-size:13px;line-height:1.7}
+#obj h4{margin:0 0 4px;font-size:11px;color:var(--acc);letter-spacing:.3em;font-family:'Oswald';font-weight:400}
+#obj .done{color:var(--ok)} #obj .fail{color:var(--bad);text-decoration:line-through}
+#feed{position:absolute;right:18px;top:150px;width:300px;font-size:12px;text-align:right}
+#feed div{margin-bottom:3px;text-shadow:0 1px 2px #000;animation:fadeout 7s forwards}
+@keyframes fadeout{0%,80%{opacity:1}100%{opacity:0}}
+#rib{position:absolute;left:50%;bottom:24vh;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px}
+#rib div{font-family:'Noto Serif JP';font-weight:700;font-size:18px;letter-spacing:.15em;text-shadow:0 2px 6px #000;animation:rib 2.4s forwards}
+#rib div.cit{color:#ffd66a;font-size:22px} #rib div.pen{color:#fff} #rib div.ric,#rib div.non{color:#9fb0bd} #rib div.over{color:#d0d8dd} #rib div.fire{color:#ff9a5a} #rib div.kill{color:#ff5a4a;font-size:26px}
+@keyframes rib{0%{opacity:0;transform:translateY(8px)}10%{opacity:1;transform:none}75%{opacity:1}100%{opacity:0}}
+#radio{position:absolute;left:50%;top:13vh;transform:translateX(-50%);max-width:70vw;text-align:center;font-family:'Noto Serif JP';font-size:16px;line-height:1.7;text-shadow:0 2px 8px #000;background:linear-gradient(90deg,transparent,rgba(0,0,0,.45),transparent);padding:6px 80px;opacity:0;transition:opacity .4s}
+#radio.on{opacity:1}
+#radio .who{font-size:12px;color:var(--acc);letter-spacing:.2em;display:block}
+#tut{position:absolute;left:50%;top:22vh;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);padding:12px 22px;font-size:15px;max-width:60vw;text-align:center;line-height:1.7}
+#tut kbd,.kbd{display:inline-block;border:1px solid var(--dim);border-bottom-width:2px;padding:0 6px;font-family:'Oswald';font-size:13px;margin:0 2px;border-radius:3px}
+#dmgdir{position:absolute;left:50%;top:50%;width:0;height:0}
+#dmgdir div{position:absolute;left:-60px;top:-160px;width:120px;height:40px;background:radial-gradient(ellipse at center bottom,rgba(255,60,40,.7),transparent 70%);transform-origin:60px 160px;animation:fadeout 2s forwards}
+#warn{position:absolute;left:50%;top:32%;transform:translateX(-50%);color:var(--bad);font-weight:700;letter-spacing:.2em;font-size:15px;text-shadow:0 1px 4px #000}
+#score{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;gap:18px;font-family:'Oswald';font-size:22px;align-items:center;text-shadow:0 1px 3px #000}
+#score .a{color:var(--blue)} #score .b{color:var(--red)} #score .t{font-size:14px;color:var(--dim)}
+#flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:11}
+#help{position:absolute;left:18px;top:18px;font-size:11px;color:var(--dim);line-height:1.8;background:var(--panel);border:1px solid var(--line);padding:8px 12px}
+#tab{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,92vw);padding:18px}
+#tab table{width:100%;border-collapse:collapse;font-size:13px}
+#tab td,#tab th{padding:6px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
+#tab th{color:var(--mute);font-weight:400;font-size:11px;letter-spacing:.15em}
+#tab tr.dead td{opacity:.4}
+#spec{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);font-size:14px;text-align:center;text-shadow:0 1px 3px #000}
+
+#pause,#result{z-index:30}
+.big{font-family:'Noto Serif JP';font-weight:900;font-size:52px;letter-spacing:.2em;margin:4px 0 10px}
+.big.win{color:var(--acc2)} .big.lose{color:var(--bad)}
+.restbl{width:100%;border-collapse:collapse;font-size:14px;margin:10px 0}
+.restbl td{padding:6px;border-bottom:1px solid rgba(255,255,255,.06)}
+#loading{position:fixed;inset:0;z-index:50;background:#05090d;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:'Noto Serif JP';letter-spacing:.3em}
+#loading .bar2{width:240px;height:2px;background:rgba(255,255,255,.1)}#loading .bar2 b{display:block;height:100%;width:0;background:var(--acc);transition:width .2s}
+#toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);padding:10px 18px;font-size:14px;z-index:60;opacity:0;transition:.3s;pointer-events:none}
+#toast.on{opacity:1}
+@media (max-width:760px){
+  #title .left{padding:30px 22px;width:100%}
+  .logo{font-size:42px}
+  #stat{width:auto;left:10px;right:10px;bottom:10px;padding:8px 10px}
+  #obj{display:none}#help{display:none!important}
+  #mapbox{display:none}
+  .shiplist{grid-template-columns:1fr}
+  #shipsel .side{width:100%}
+}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="vign"></div>
+<div id="flash"></div>
+<div id="loading"><div>鋼鉄の海</div><div class="bar2"><b id="ldb"></b></div><div id="ldt" style="font-size:12px;color:#6b7d8b;letter-spacing:.1em">海を生成中…</div></div>
+
+<!-- ======== TITLE ======== -->
+<section id="title" class="screen hidden">
+  <div class="left">
+    <h1 class="logo">鋼鉄の海<small>IRON TIDE</small></h1>
+    <nav class="menu" id="mainmenu">
+      <button data-go="story">ストーリー<span>CAMPAIGN</span></button>
+      <button data-go="tutorial">チュートリアル<span>TRAINING</span></button>
+      <button data-go="free">フリーミッション<span>FREE MISSION</span></button>
+      <button data-go="multi">マルチプレイ<span>ONLINE · 対戦 / チーム戦 / 協力ボス戦</span></button>
+      <button data-go="dock">艦艇選択・図鑑<span>DOCKYARD</span></button>
+      <button data-go="settings">設定<span>SETTINGS</span></button>
+    </nav>
+    <div class="tfoot">マウスで照準 · 右クリック/Shiftで照準器 · 左クリックで斉射<br>W/S 速力 · A/D 舵 · 1/2 弾種 · T 魚雷 · R 応急修理 · M 地図<br><span id="curship"></span></div>
+  </div>
+</section>
+
+<!-- ======== SHIP SELECT ======== -->
+<section id="shipsel" class="screen hidden">
+  <button class="btn back" data-back>← 戻る</button>
+  <div class="side">
+    <div class="sname" id="ssName"></div>
+    <div class="sdesc" id="ssDesc"></div>
+    <div class="bars" id="ssBars"></div>
+    <table class="spec" id="ssSpec"></table>
+    <div class="shiplist" id="ssList"></div>
+    <div class="row" style="margin-top:auto"><button class="btn pri" id="ssOk">この艦で出撃</button><span class="note" id="ssNote" style="align-self:center"></span></div>
+  </div>
+</section>
+
+<!-- ======== STORY ======== -->
+<section id="story" class="screen panelscr hidden">
+  <div class="card">
+    <h2><small>CAMPAIGN</small>ストーリー「蒼の残光」</h2>
+    <p class="lead">架空の世界。海洋国家・蒼海連邦の旗艦「大和」艦長として、北方の鉄冠同盟艦隊との戦いに挑む。</p>
+    <div class="chap" id="chapList"></div>
+    <div class="row" style="margin-top:16px"><button class="btn" data-back>戻る</button></div>
+  </div>
+</section>
+
+<!-- ======== FREE ======== -->
+<section id="free" class="screen panelscr hidden">
+  <div class="card">
+    <h2><small>FREE MISSION</small>フリーミッション</h2>
+    <p class="lead">海域・天候・敵味方の編成を自由に決めて戦う。</p>
+    <div class="row">
+      <div style="flex:1;min-width:280px">
+        <div class="field"><div class="lab">自艦</div><div class="row" style="gap:8px;align-items:center"><b id="frShip" class="serif" style="font-size:18px"></b><button class="btn" id="frShipBtn">変更</button></div></div>
+        <div class="field"><div class="lab">海域</div><div class="seg" id="frMap"></div></div>
+        <div class="field"><div class="lab">時刻・天候</div><div class="seg" id="frSky"></div></div>
+        <div class="field"><div class="lab">海況（波の高さ）</div><div class="seg" id="frSea"></div></div>
+      </div>
+      <div style="flex:1;min-width:280px">
+        <div class="field"><div class="lab">敵艦隊</div><div class="seg" id="frEnemy"></div></div>
+        <div class="field"><div class="lab">味方艦</div><div class="seg" id="frAlly"></div></div>
+        <div class="field"><div class="lab">NPC 難易度</div><div class="seg" id="frDiff"></div></div>
+        <div class="field"><div class="lab">開始距離</div><div class="seg" id="frDist"></div></div>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px"><button class="btn pri" id="frGo">出撃</button><button class="btn" data-back>戻る</button></div>
+  </div>
+</section>
+
+<!-- ======== MULTI ======== -->
+<section id="multi" class="screen panelscr hidden">
+  <div class="card">
+    <h2><small>ONLINE</small>マルチプレイ</h2>
+    <div id="mpJoin">
+      <p class="lead">ルームを作ってリンクを送れば、友達がそのまま同じ部屋に入れる（最大8人）。</p>
+      <div class="row">
+        <div style="flex:1;min-width:260px">
+          <div class="field"><label for="mpName">艦長名</label><input type="text" id="mpName" maxlength="12"></div>
+          <div class="field"><label for="mpCode">ルームコード（空欄なら新しく作る）</label><input type="text" id="mpCode" maxlength="8" placeholder="例: K7Q2"></div>
+          <div class="row"><button class="btn pri" id="mpGo">ルームに入る</button><button class="btn" data-back>戻る</button></div>
+          <p class="note" id="mpStat" style="margin-top:12px"></p>
+        </div>
+        <div style="flex:1;min-width:260px" class="note">
+          <b style="color:var(--ink)">モード</b><br>
+          ・<b>対戦（個人戦）</b> … 全員が敵。最後まで浮いていた艦の勝ち<br>
+          ・<b>チーム戦</b> … 蒼 vs 紅（最大4対4）。空き枠をNPCで埋めることもできる<br>
+          ・<b>協力ボス戦</b> … 全員で巨大戦艦と護衛艦隊に挑む。難易度を選べる<br><br>
+          通信は公開リレーサーバー経由。家のWi-Fiとスマホ回線など、別のネットワーク同士でも遊べる。
+        </div>
+      </div>
+    </div>
+    <div id="mpRoom" class="hidden">
+      <div class="row" style="align-items:center;justify-content:space-between">
+        <div><div class="note">ルームコード</div><div class="code" id="mpRoomCode"></div></div>
+        <div class="row" style="gap:8px"><button class="btn" id="mpCopy">招待リンクをコピー</button><button class="btn" id="mpLeave">退室</button></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <div style="flex:1.2;min-width:300px">
+          <ul class="roster" id="mpRoster"></ul>
+          <p class="note" id="mpInfo"></p>
+        </div>
+        <div style="flex:1;min-width:280px">
+          <div class="field"><div class="lab">モード <span id="mpLeadNote" class="note"></span></div><div class="seg" id="mpMode"></div></div>
+          <div class="field"><div class="lab">海域</div><div class="seg" id="mpMap"></div></div>
+          <div class="field" id="mpDiffF"><div class="lab">ボス難易度</div><div class="seg" id="mpDiff"></div></div>
+          <div class="field" id="mpBotF"><div class="lab">空き枠</div><div class="seg" id="mpBots"></div></div>
+          <div class="field" id="mpTeamF"><div class="lab">所属</div><div class="seg" id="mpTeam"></div></div>
+          <div class="field"><div class="lab">自艦</div><div class="row" style="gap:8px;align-items:center"><b id="mpShip" class="serif" style="font-size:17px"></b><button class="btn" id="mpShipBtn">変更</button></div></div>
+          <button class="btn pri" id="mpReady" style="width:100%">準備OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======== SETTINGS ======== -->
+<section id="settings" class="screen panelscr hidden">
+  <div class="card" style="width:min(560px,94vw)">
+    <h2><small>SETTINGS</small>設定</h2>
+    <div class="field"><div class="lab">グラフィック</div><div class="seg" id="stQ"></div></div>
+    <div class="field"><label for="stVol">音量</label><input type="range" id="stVol" min="0" max="1" step="0.05"></div>
+    <div class="field"><label for="stSens">マウス感度</label><input type="range" id="stSens" min="0.3" max="2.5" step="0.05"></div>
+    <div class="field"><div class="lab">弾道表示（自艦の砲弾の光跡）</div><div class="seg" id="stTr"></div></div>
+    <div class="field"><div class="lab">照準補助（NPC戦のみ・リード位置を表示）</div><div class="seg" id="stAssist"></div></div>
+    <button class="btn" data-back>戻る</button>
+  </div>
+</section>
+
+<!-- ======== BRIEFING ======== -->
+<section id="brief" class="screen panelscr hidden">
+  <div class="card">
+    <h2 id="brT"></h2>
+    <div class="brieftext" id="brText"></div>
+    <div class="objs" id="brObj"></div>
+    <div class="row"><button class="btn pri" id="brGo">出撃</button><button class="btn" data-back>戻る</button></div>
+  </div>
+</section>
+
+<!-- ======== HUD ======== -->
+<div id="hud" class="hidden">
+  <div id="scope"><svg viewBox="-100 -100 200 200"><g stroke="#cfe" stroke-width=".3" fill="none" opacity=".85">
+    <line x1="-100" y1="0" x2="-6" y2="0"/><line x1="6" y1="0" x2="100" y2="0"/><line x1="0" y1="6" x2="0" y2="100"/><line x1="0" y1="-100" x2="0" y2="-30"/>
+    <g id="scTicks"></g><circle r="99" stroke-width=".6"/></g></svg><div id="zoomv"></div></div>
+  <div id="tags"></div>
+  <div id="xh"></div>
+  <div id="rng"></div>
+  <div id="tgt"></div>
+  <div id="dmgdir"></div>
+  <div id="warn"></div>
+  <div id="score"></div>
+  <div id="radio"><span class="who"></span><span class="txt"></span></div>
+  <div id="tut" class="hidden"></div>
+  <div id="rib"></div>
+  <div id="feed"></div>
+  <div id="spec"></div>
+  <div class="hpanel" id="obj"><h4>OBJECTIVE</h4><div id="objL"></div></div>
+  <div class="hpanel" id="stat">
+    <div class="nm" id="hName"></div>
+    <div id="hpbar"><b></b></div>
+    <div id="hpt"><span id="hpv"></span><span id="hpp"></span></div>
+    <div id="tele"><div class="spd num" id="hSpd"></div><div class="ord"><div id="hOrd"></div><div id="rud"><i></i><b></b></div><div id="hRud" style="color:var(--mute);margin-top:3px"></div></div></div>
+    <div id="guns"></div>
+    <div id="ammo"></div>
+    <div id="cons"></div>
+    <div id="status"></div>
+  </div>
+  <div class="hpanel" id="mapbox"><canvas id="mm" width="460" height="460"></canvas></div>
+  <div class="hpanel hidden" id="tab"></div>
+  <div id="help" class="hidden"></div>
+</div>
+
+<section id="pause" class="screen panelscr hidden">
+  <div class="card" style="width:min(420px,92vw);text-align:center">
+    <h2><small>PAUSE</small>一時停止</h2>
+    <div style="display:grid;gap:8px;margin-top:16px">
+      <button class="btn pri" id="psResume">再開</button>
+      <button class="btn" id="psSettings">設定</button>
+      <button class="btn" id="psRetry">やり直す</button>
+      <button class="btn" id="psQuit">メニューに戻る</button>
+    </div>
+    <p class="note" style="margin-top:14px">操作：マウス 照準／右クリック・Shift 照準器（ホイールで倍率）／左クリック 斉射／W・S 速力／A・D 舵／1・2 徹甲弾・榴弾／T 魚雷／R 応急修理／M 地図／Tab 戦況／V 砲弾視点</p>
+  </div>
+</section>
+
+<section id="result" class="screen panelscr hidden">
+  <div class="card" style="width:min(640px,94vw);text-align:center">
+    <div class="note" id="rsSub"></div>
+    <div class="big" id="rsT"></div>
+    <div id="rsText" class="brieftext" style="text-align:left;font-size:14px"></div>
+    <table class="restbl" id="rsTbl"></table>
+    <div class="row" style="justify-content:center"><button class="btn pri" id="rsNext">次へ</button><button class="btn" id="rsRetry">もう一度</button><button class="btn" id="rsMenu">メニューへ</button></div>
+  </div>
+</section>
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script src="js/core.js"></script>
+<script src="js/env.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/ships.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/net.js"></script>
+<script src="js/modes.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
